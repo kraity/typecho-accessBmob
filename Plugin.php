@@ -3,7 +3,7 @@
  * AccessBmob 基于 Access 且使用 Bmob后端云 作数据库的访问统计插件
  * @package AccessBmob
  * @author 权那他
- * @version 1.0
+ * @version 1.2
  */
 
 /** @noinspection PhpUndefinedFieldInspection */
@@ -48,10 +48,33 @@ class AccessBmob_Plugin implements Typecho_Plugin_Interface
     {
         $all = Typecho_Plugin::export();
         if (array_key_exists('Bmob', $all['activated'])) {
+
+            $request = Typecho_Request::getInstance();
+            AccessBmob_Plugin::setEntryPoint($request->getReferer());
+
             $index = rtrim(Helper::options()->index, '/');
             $parsedArchive = AccessBmob_Plugin::staticParseArchive($archive);
             echo "<script type=\"text/javascript\">(function(w){var t=function(){var i=new Image();i.src='{$index}/accessBmob/log/track?u='+location.pathname+location.search+location.hash+'&cid={$parsedArchive['content_id']}&mid={$parsedArchive['meta_id']}&rand='+new Date().getTime()};t();var a={};a.track=t;w.Access=a})(this);</script>";
         }
+    }
+
+    /**
+     * 获取首次进入网站时的来源
+     *
+     * @access public
+     * @param $referer
+     */
+    public static function setEntryPoint($referer)
+    {
+        Typecho_Cookie::set('__typecho_accessBmob_referer', $referer);
+        $entrypoint = $referer;
+        if ($entrypoint == null) {
+            $entrypoint = Typecho_Cookie::get('__typecho_accessBmob_entrypoint');
+        }
+        if (parse_url($entrypoint, PHP_URL_HOST) == parse_url(Helper::options()->siteUrl, PHP_URL_HOST)) {
+            $entrypoint = null;
+        }
+        Typecho_Cookie::set('__typecho_accessBmob_entrypoint', $entrypoint);
     }
 
     /** @noinspection PhpUndefinedMethodInspection
@@ -83,7 +106,10 @@ class AccessBmob_Plugin implements Typecho_Plugin_Interface
     // 插件配置面板
     public static function config(Typecho_Widget_Helper_Form $form)
     {
-
+        $pageSize = new Typecho_Widget_Helper_Form_Element_Text(
+            'pageSize', null, '20',
+            '分页数量', '每页显示的日志数量');
+        $form->addInput($pageSize);
     }
 
     // 个人用户配置面板

@@ -1,4 +1,6 @@
 <?php
+/** @noinspection SqlNoDataSourceInspection */
+/** @noinspection SqlDialectInspection */
 /** @noinspection SpellCheckingInspection */
 /** @noinspection PhpUnhandledExceptionInspection */
 /** @noinspection PhpDocSignatureInspection */
@@ -29,6 +31,7 @@ class AccessBmob_Core
         $this->request = Typecho_Request::getInstance();
         $this->response = Typecho_Response::getInstance();
         $this->ua = new AccessBmob_UA($this->request->getAgent());
+        $this->config = Typecho_Widget::widget('Widget_Options')->plugin('AccessBmob');
         $this->bmobObj = new BmobObject("Access");
         switch ($this->request->get('action')) {
             case 'overview':
@@ -52,10 +55,10 @@ class AccessBmob_Core
 
         $bmobBql = new BmobBql();
         $this->referer['url'] = $this->bmobArray(
-            $bmobBql->query(array('bql' => "select DISTINCT entrypoint AS value, COUNT(1) as count from Access group by entrypoint limit=10"))
+            $bmobBql->query(array('bql' => "select DISTINCT entrypoint AS value, COUNT(1) as count from Access group by entrypoint limit=20"))
         );
         $this->referer['domain'] = $this->bmobArray(
-            $bmobBql->query(array('bql' => "select DISTINCT entrypoint_domain AS value, COUNT(1) as count from Access group by entrypoint_domain limit=10"))
+            $bmobBql->query(array('bql' => "select DISTINCT entrypoint_domain AS value, COUNT(1) as count from Access group by entrypoint_domain limit=20"))
         );
         $this->referer = $this->htmlEncode($this->urlDecode($this->referer));
     }
@@ -133,12 +136,6 @@ class AccessBmob_Core
         $filter = $this->request->get('filter', 'all');
         $pagenum = $this->request->get('page', 1);
         $offset = (max(intval($pagenum), 1) - 1) * $this->config->pageSize;
-
-//        $query = $this->db->select()->from('table.access_log')
-//            ->order('time', Typecho_Db::SORT_DESC)
-//            ->offset($offset)->limit($this->config->pageSize);
-//        $qcount = $this->db->select('count(1) AS count')->from('table.access_log');
-
         $where = array();
         switch ($type) {
             case 1:
@@ -170,7 +167,7 @@ class AccessBmob_Core
         $list = $this->bmobObj->get("",
             array(
                 count($where) > 0 ? 'where=' . json_encode($where) : "",
-                'limit=20',
+                'limit=' . $this->config->pageSize,
                 'skip=' . $offset,
                 'order=-time'
             )
@@ -205,7 +202,11 @@ class AccessBmob_Core
             $filter => $filterOptions
         );
 
-        $page = new AccessBmob_Page(20, count($list), $pagenum, 10,
+        include_once Bmob_Plugin::findDir("BmobBql.class.php");
+        $bmobBql = new BmobBql();
+        $this->logs['rows'] = $bmobBql->query(array('bql' => "SELECT COUNT(1) AS count FROM Access"))->count;
+
+        $page = new AccessBmob_Page($this->config->pageSize, $this->logs['rows'], $pagenum, 10,
             array_merge($filterArr, array(
                 'panel' => AccessBmob_Plugin::$panel,
                 'action' => 'logs',
@@ -249,27 +250,6 @@ class AccessBmob_Core
     }
 
     /**
-     * 获取首次进入网站时的来源
-     *
-     * @access public
-     * @return string
-     */
-    public function getEntryPoint()
-    {
-        $entrypoint = $this->request->getReferer();
-        if ($entrypoint == null) {
-            $entrypoint = Typecho_Cookie::get('__typecho_access_entrypoint');
-        }
-        if (parse_url($entrypoint, PHP_URL_HOST) == parse_url(Helper::options()->siteUrl, PHP_URL_HOST)) {
-            $entrypoint = null;
-        }
-        if ($entrypoint != null) {
-            Typecho_Cookie::set('__typecho_access_entrypoint', $entrypoint);
-        }
-        return $entrypoint;
-    }
-
-    /**
      * 记录当前访问
      *
      * @access public
@@ -286,8 +266,8 @@ class AccessBmob_Core
         }
         $ip = bindec(decbin(ip2long($ip)));
 
-        $entrypoint = $this->getEntryPoint();
-        $referer = $this->request->getReferer();
+        $entrypoint = Typecho_Cookie::get("__typecho_accessBmob_entrypoint");
+        $referer = Typecho_Cookie::get("__typecho_accessBmob_referer");
         $time = Helper::options()->gmtTime + (Helper::options()->timezone - Helper::options()->serverTimezone);
 
         if ($archive != null) {
