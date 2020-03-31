@@ -120,12 +120,16 @@ $access = new AccessBmob_Core();
                                             <td><a data-action="ua" href="#"
                                                    title="<?php echo $log['ua']; ?>"><?php echo $log['display_name']; ?></a>
                                             </td>
-                                            <td><a data-action="ip"
+                                            <td>
+                                                <?php if ($request->filter != 'ip'): ?>
+                                                    <a target="_self"
+                                                       href="<?php $options->adminUrl('extending.php?panel=' . AccessBmob_Plugin::$panel . '&filter=ip&ip=' . $access->long2ip($log['ip']) . '&type=' . $request->type); ?>">
+                                                        👉</a>
+                                                <?php endif; ?>
+                                                <a data-action="ip"
                                                    data-ip="<?php echo $access->long2ip($log['ip']); ?>"
-                                                   href="#"><?php echo $access->long2ip($log['ip']); ?></a><?php if ($request->filter != 'ip'): ?>
-                                                <a target="_self"
-                                                   href="<?php $options->adminUrl('extending.php?panel=' . AccessBmob_Plugin::$panel . '&filter=ip&ip=' . $access->long2ip($log['ip']) . '&type=' . $request->type); ?>">
-                                                        [ ? ]</a><?php endif; ?></td>
+                                                   href="#"><?php echo $access->long2ip($log['ip']); ?></a>
+                                            </td>
                                             <td><a target="_blank" data-action="referer"
                                                    href="<?php echo $log['referer']; ?>"><?php echo $log['referer']; ?></a>
                                             </td>
