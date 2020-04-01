@@ -46,9 +46,7 @@ class AccessBmob_Plugin implements Typecho_Plugin_Interface
 
     public static function frontend($archive)
     {
-        $all = Typecho_Plugin::export();
-        if (array_key_exists('Bmob', $all['activated'])) {
-
+        if (!AccessBmob_Plugin::isAdmin()) {
             $request = Typecho_Request::getInstance();
             AccessBmob_Plugin::setEntryPoint($request->getReferer());
 
@@ -101,6 +99,16 @@ class AccessBmob_Plugin implements Typecho_Plugin_Interface
             'content_id' => $content_id,
             'meta_id' => $meta_id,
         );
+    }
+
+    /** @noinspection PhpUnhandledExceptionInspection */
+    public static function isAdmin()
+    {
+        $hasLogin = Typecho_Widget::widget('Widget_User')->hasLogin();
+        if (!$hasLogin) {
+            return false;
+        }
+        return Typecho_Widget::widget('Widget_User')->pass('administrator', true);
     }
 
     // 插件配置面板

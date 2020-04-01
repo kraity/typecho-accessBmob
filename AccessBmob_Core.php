@@ -253,6 +253,10 @@ class AccessBmob_Core
      * 记录当前访问
      *
      * @access public
+     * @param null $archive
+     * @param null $url
+     * @param null $content_id
+     * @param null $meta_id
      * @return void
      */
     public function writeLogs($archive = null, $url = null, $content_id = null, $meta_id = null)
